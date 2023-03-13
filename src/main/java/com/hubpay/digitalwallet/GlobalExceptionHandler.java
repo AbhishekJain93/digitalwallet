@@ -8,32 +8,45 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.hubpay.digitalwallet.exception.ErrorResponse;
+import com.hubpay.digitalwallet.exception.ServiceException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
-        String err = ex.getBindingResult().getFieldErrors()
-                .stream().map(FieldError::getDefaultMessage).findFirst().orElse("unkown");
-        return new ResponseEntity<>(
-                ErrorResponse.builder().errorCode(HttpStatus.BAD_REQUEST.value()).errorMessage(err).build(),
-                HttpStatus.BAD_REQUEST);
-    }
+        @ExceptionHandler(ServiceException.class)
+        public ResponseEntity<ErrorResponse> handleServiceErrors(ServiceException ex) {
+                return new ResponseEntity<>(
+                                ErrorResponse.builder().errorCode(ex.getErrorCode())
+                                                .errorMessage(ex.getErrorMessage()).build(),
+                                ex.getHttpStatus());
+        }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentErrors(IllegalArgumentException ex) {
-        return new ResponseEntity<>(
-                ErrorResponse.builder().errorCode(HttpStatus.BAD_REQUEST.value()).errorMessage(ex.getMessage()).build(),
-                HttpStatus.BAD_REQUEST);
-    }
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
+                String err = ex.getBindingResult().getFieldErrors()
+                                .stream().map(FieldError::getDefaultMessage).findFirst().orElse("unkown");
+                return new ResponseEntity<>(
+                                ErrorResponse.builder().errorCode(HttpStatus.BAD_REQUEST.value()).errorMessage(err)
+                                                .build(),
+                                HttpStatus.BAD_REQUEST);
+        }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleServerErrors(Exception ex) {
-        return new ResponseEntity<>(
-                ErrorResponse.builder().errorCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                        .errorMessage(String.format("unexpected error occured: %s", ex.getMessage())).build(),
-                HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+        @ExceptionHandler(IllegalArgumentException.class)
+        public ResponseEntity<ErrorResponse> handleIllegalArgumentErrors(IllegalArgumentException ex) {
+                return new ResponseEntity<>(
+                                ErrorResponse.builder().errorCode(HttpStatus.BAD_REQUEST.value())
+                                                .errorMessage(ex.getMessage()).build(),
+                                HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler(Throwable.class)
+        public ResponseEntity<ErrorResponse> handleServerErrors(Exception ex) {
+                return new ResponseEntity<>(
+                                ErrorResponse.builder().errorCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                                                .errorMessage(String.format("unexpected error occured: %s",
+                                                                ex.getMessage()))
+                                                .build(),
+                                HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
 }
