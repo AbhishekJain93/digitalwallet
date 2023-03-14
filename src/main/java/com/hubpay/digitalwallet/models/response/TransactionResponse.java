@@ -13,7 +13,7 @@ public class TransactionResponse {
     private UUID transactionId;
     private String transactionRef;
     private int walletId;
-    private int updatedBalance;
+    private long updatedBalance;
     private java.sql.Timestamp createdAt;
 
 }

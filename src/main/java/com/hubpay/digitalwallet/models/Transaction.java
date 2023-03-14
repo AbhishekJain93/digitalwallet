@@ -10,6 +10,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -31,7 +33,7 @@ public class Transaction {
     private String transactionRef;
 
     @Column(name = "amount")
-    private int amount;
+    private long amount;
 
     @Column(name = "currency_code")
     private String currencyCode;
@@ -39,6 +41,7 @@ public class Transaction {
     @Column(name = "wallet_id")
     private int walletId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type")
     private TransactionType transactionType;
 
@@ -47,7 +50,7 @@ public class Transaction {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
     private java.sql.Timestamp createdAt;
 
-    public Transaction(UUID id, String transactionRef, int amount, String currencyCode, int walletId,
+    public Transaction(UUID id, String transactionRef, long amount, String currencyCode, int walletId,
             TransactionType transactionType) {
         this.id = id;
         this.transactionRef = transactionRef;

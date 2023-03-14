@@ -1,7 +1,6 @@
 package com.hubpay.digitalwallet.services;
 
 import java.util.HashSet;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 
@@ -19,9 +18,6 @@ import com.hubpay.digitalwallet.models.response.TransactionResponse;
 import com.hubpay.digitalwallet.repositories.TransactionRepository;
 import com.hubpay.digitalwallet.repositories.WalletRepository;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Service
 public class WalletService {
         @Autowired
@@ -32,16 +28,16 @@ public class WalletService {
         Set<String> idempotentRequestSet = new HashSet<>();
 
         @Transactional
-        public TransactionResponse credit(int walletId, int amount, String currency, String transactionRef) {
+        public TransactionResponse credit(int walletId, long amount, String currency, String transactionRef) {
                 return executeTransaction(walletId, amount, currency, transactionRef, TransactionType.CREDIT);
         }
 
         @Transactional
-        public TransactionResponse debit(int walletId, int amount, String currency, String transactionRef) {
+        public TransactionResponse debit(int walletId, long amount, String currency, String transactionRef) {
                 return executeTransaction(walletId, amount, currency, transactionRef, TransactionType.DEBIT);
         }
 
-        private TransactionResponse executeTransaction(int walletId, int amount, String currency,
+        private TransactionResponse executeTransaction(int walletId, long amount, String currency,
                         String transactionRef, TransactionType type) {
                 try {
                         if (!transactionRepository.findWithLockingByTransactionRef(transactionRef).isEmpty()) {
@@ -54,22 +50,7 @@ public class WalletService {
                         return type == TransactionType.CREDIT
                                         ? executeCredit(walletId, amount, currency, transactionRef)
                                         : executeDebit(walletId, amount, currency, transactionRef);
-                } catch (NoSuchElementException e) {
-                        log.error(String.format("wallet with id: %d not found for %s for transactionRef: %s",
-                                        walletId,
-                                        type,
-                                        transactionRef), e);
-
-                        throw new ServiceException(
-                                        String.format("wallet with id: %d not found for %s for transactionRef: %s",
-                                                        walletId,
-                                                        type,
-                                                        transactionRef),
-                                        HttpStatus.NOT_FOUND, e);
                 } catch (DataIntegrityViolationException e) {
-                        log.error(String.format("transaction already exists for transactionRef: %s",
-                                        transactionRef), e);
-
                         throw new ServiceException(
                                         String.format("transaction already exists for transactionRef: %s",
                                                         transactionRef),
@@ -77,26 +58,35 @@ public class WalletService {
                 }
         }
 
-        private TransactionResponse executeDebit(int walletId, int amount, String currency, String transactionRef) {
-                Wallet wallet = walletRepository.findWithLockingById(walletId).get();
+        private TransactionResponse executeDebit(int walletId, long amount, String currency, String transactionRef) {
+                Wallet wallet = walletRepository.findWithLockingById(walletId).orElseThrow(() -> new ServiceException(
+                                String.format("wallet with id: %d not found for transactionRef: %s",
+                                                walletId,
+                                                transactionRef),
+                                HttpStatus.NOT_FOUND));
 
                 validateCurrency(wallet, currency);
+                validateWalletBalance(wallet, amount);
 
                 wallet.setBalance(wallet.getBalance() - amount);
                 Wallet updatedWallet = walletRepository.saveAndFlush(wallet);
 
-                Transaction creditTransaction = transactionRepository.saveAndFlush(
+                Transaction debitTransaction = transactionRepository.saveAndFlush(
                                 new Transaction(UUID.randomUUID(), transactionRef, amount, currency, walletId,
-                                                TransactionType.CREDIT));
+                                                TransactionType.DEBIT));
 
-                return TransactionResponse.builder().transactionId(creditTransaction.getId())
+                return TransactionResponse.builder().transactionId(debitTransaction.getId())
                                 .transactionRef(transactionRef)
                                 .updatedBalance(updatedWallet.getBalance()).walletId(walletId)
-                                .createdAt(creditTransaction.getCreatedAt()).build();
+                                .createdAt(debitTransaction.getCreatedAt()).build();
         }
 
-        private TransactionResponse executeCredit(int walletId, int amount, String currency, String transactionRef) {
-                Wallet wallet = walletRepository.findWithLockingById(walletId).get();
+        private TransactionResponse executeCredit(int walletId, long amount, String currency, String transactionRef) {
+                Wallet wallet = walletRepository.findWithLockingById(walletId).orElseThrow(() -> new ServiceException(
+                                String.format("wallet with id: %d not found for transactionRef: %s",
+                                                walletId,
+                                                transactionRef),
+                                HttpStatus.NOT_FOUND));
 
                 validateCurrency(wallet, currency);
 
@@ -115,10 +105,6 @@ public class WalletService {
 
         private void validateCurrency(Wallet wallet, String transactionCurrency) {
                 if (!wallet.getCurrencyCode().equals(transactionCurrency)) {
-                        log.error(String.format("wallet currency: %s don't match with transaction currency: %s",
-                                        wallet.getCurrencyCode(),
-                                        transactionCurrency));
-
                         throw new ServiceException(
                                         String.format("wallet currency: %s don't match with transaction currency: %s",
                                                         wallet.getCurrencyCode(),
@@ -126,5 +112,15 @@ public class WalletService {
                                         HttpStatus.BAD_REQUEST);
                 }
 
+        }
+
+        private void validateWalletBalance(Wallet wallet, long transactionAmount) {
+                if (wallet.getBalance() < transactionAmount) {
+                        throw new ServiceException(
+                                        String.format("insufficent funds for debit, wallet balance: %d, transaction amount: %d",
+                                                        wallet.getBalance(), transactionAmount,
+                                                        wallet.getCurrencyCode()),
+                                        HttpStatus.BAD_REQUEST);
+                }
         }
 }

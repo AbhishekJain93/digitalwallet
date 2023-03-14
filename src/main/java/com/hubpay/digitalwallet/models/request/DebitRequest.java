@@ -11,11 +11,11 @@ import lombok.Getter;
 
 @Getter
 @Valid
-public class CreditRequest {
+public class DebitRequest {
     @NotBlank(message = "transactionRef can't be empty")
     @Length(max = 36, message = "transactionRef can't be more than 36 chars")
     private String transactionRef;
-    @Range(min = 1000, max = 1000000, message = "Amount should be between 1000 and 10,000")
+    @Range(min = 1, max = 500000, message = "Amount should be between 1 and 500000")
     private long amount;
     @ValidCurrencyCode
     private String currencyCode;

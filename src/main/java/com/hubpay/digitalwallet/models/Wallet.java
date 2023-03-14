@@ -25,7 +25,7 @@ public class Wallet {
     private int id;
 
     @Column(name = "balance")
-    private int balance;
+    private long balance;
 
     @Column(name = "currency_code")
     private String currencyCode;

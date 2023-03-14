@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.hubpay.digitalwallet.models.Transaction;
 import com.hubpay.digitalwallet.models.request.CreditRequest;
+import com.hubpay.digitalwallet.models.request.DebitRequest;
+import com.hubpay.digitalwallet.models.request.ListTransactionFilter;
 import com.hubpay.digitalwallet.models.response.TransactionResponse;
 import com.hubpay.digitalwallet.services.TransactionService;
 import com.hubpay.digitalwallet.services.WalletService;
@@ -27,31 +29,45 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api")
 @RestController
 public class DigitalWalletController {
-    @Autowired
-    TransactionService transactionService;
+        @Autowired
+        TransactionService transactionService;
 
-    @Autowired
-    WalletService walletService;
+        @Autowired
+        WalletService walletService;
 
-    @PostMapping("/wallets/{id}/credits")
-    public ResponseEntity<TransactionResponse> credit(@NonNull @PathVariable int id,
-            @RequestBody @Valid CreditRequest request) {
-        log.info(String.format(
-                "performing credit in  wallet: %s, amount: %s, currency: %s, transactionRef: %s", id,
-                request.getAmount(), request.getCurrencyCode(), request.getTransactionRef()));
+        @PostMapping("/wallets/{id}/credits")
+        public ResponseEntity<TransactionResponse> credit(@NonNull @PathVariable int id,
+                        @RequestBody @Valid CreditRequest request) {
+                log.info(String.format(
+                                "performing credit in  wallet: %s, amount: %s, currency: %s, transactionRef: %s", id,
+                                request.getAmount(), request.getCurrencyCode(), request.getTransactionRef()));
 
-        TransactionResponse response = walletService.credit(id, request.getAmount(), request.getCurrencyCode(),
-                request.getTransactionRef());
+                TransactionResponse response = walletService.credit(id, request.getAmount(), request.getCurrencyCode(),
+                                request.getTransactionRef());
 
-        return new ResponseEntity<TransactionResponse>(response, HttpStatus.OK);
-    }
+                return new ResponseEntity<TransactionResponse>(response, HttpStatus.OK);
+        }
 
-    @GetMapping("/wallets/{id}/transactions")
-    public ResponseEntity<List<Transaction>> listTransactions(@NonNull @PathVariable int id,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "3") int size) {
-        List<Transaction> transactions = transactionService.listTransactions(id, page, size);
-        return new ResponseEntity<>(transactions, HttpStatus.OK);
-    }
+        @PostMapping("/wallets/{id}/debits")
+        public ResponseEntity<TransactionResponse> debit(@NonNull @PathVariable int id,
+                        @RequestBody @Valid DebitRequest request) {
+                log.info(String.format(
+                                "performing debit in  wallet: %s, amount: %s, currency: %s, transactionRef: %s", id,
+                                request.getAmount(), request.getCurrencyCode(), request.getTransactionRef()));
+
+                TransactionResponse response = walletService.debit(id, request.getAmount(), request.getCurrencyCode(),
+                                request.getTransactionRef());
+
+                return new ResponseEntity<TransactionResponse>(response, HttpStatus.OK);
+        }
+
+        @GetMapping("/wallets/{id}/transactions")
+        public ResponseEntity<List<Transaction>> listTransactions(@NonNull @PathVariable int id,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "3") int size,
+                        @RequestParam(defaultValue = "ALL") ListTransactionFilter filter) {
+                List<Transaction> transactions = transactionService.listTransactions(id, page, size, filter);
+                return new ResponseEntity<>(transactions, HttpStatus.OK);
+        }
 
 }

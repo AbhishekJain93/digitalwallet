@@ -10,11 +10,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.hubpay.digitalwallet.exception.ErrorResponse;
 import com.hubpay.digitalwallet.exception.ServiceException;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
         @ExceptionHandler(ServiceException.class)
         public ResponseEntity<ErrorResponse> handleServiceErrors(ServiceException ex) {
+                log.error(String.format("service error occured while executing request: %s", ex.getErrorMessage()), ex);
                 return new ResponseEntity<>(
                                 ErrorResponse.builder().errorCode(ex.getErrorCode())
                                                 .errorMessage(ex.getErrorMessage()).build(),
@@ -25,6 +29,8 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
                 String err = ex.getBindingResult().getFieldErrors()
                                 .stream().map(FieldError::getDefaultMessage).findFirst().orElse("unkown");
+                log.error(String.format("validation error occured while executing request: %s", err),
+                                ex);
                 return new ResponseEntity<>(
                                 ErrorResponse.builder().errorCode(HttpStatus.BAD_REQUEST.value()).errorMessage(err)
                                                 .build(),
@@ -33,6 +39,8 @@ public class GlobalExceptionHandler {
 
         @ExceptionHandler(IllegalArgumentException.class)
         public ResponseEntity<ErrorResponse> handleIllegalArgumentErrors(IllegalArgumentException ex) {
+                log.error(String.format("illegal argument error occured while executing request: %s", ex.getMessage()),
+                                ex);
                 return new ResponseEntity<>(
                                 ErrorResponse.builder().errorCode(HttpStatus.BAD_REQUEST.value())
                                                 .errorMessage(ex.getMessage()).build(),
@@ -41,6 +49,8 @@ public class GlobalExceptionHandler {
 
         @ExceptionHandler(Throwable.class)
         public ResponseEntity<ErrorResponse> handleServerErrors(Exception ex) {
+                log.error(String.format("unhandled error occured while executing request: %s", ex.getMessage()),
+                                ex);
                 return new ResponseEntity<>(
                                 ErrorResponse.builder().errorCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                                                 .errorMessage(String.format("unexpected error occured: %s",
@@ -48,5 +58,4 @@ public class GlobalExceptionHandler {
                                                 .build(),
                                 HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
 }
