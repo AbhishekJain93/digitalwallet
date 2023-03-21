@@ -26,6 +26,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
+// this won't work as @springbootapplication is in different package and
+// component scan only scans that package and sub-directories
 public class EmiratesTransactionsController {
 
     public static final String delimiter = ",";
